@@ -1,6 +1,8 @@
 //! Japanese UI text: (English key, translation). Keys are the English strings passed to `tr`.
 
 pub const TABLE: &[(&str, &str)] = &[
+    ("Hex", "16進数"),
+    ("Paste #RRGGBB or R,G,B (0–255)", "#RRGGBB または R,G,B (0–255) を貼り付け"),
     ("Baking {map} ({n}/{total})", "{map} をベイク中 ({n}/{total})"),
     ("Baking {map} ({n}/{total}), texture set {set} of {sets}", "{map} をベイク中 ({n}/{total})、テクスチャセット {set}/{sets}"),
     ("Follow Newest Map", "最新のマップを追う"),
