@@ -1,6 +1,8 @@
 //! Italian UI text: (English key, translation). Keys are the English strings passed to `tr`.
 
 pub const TABLE: &[(&str, &str)] = &[
+    ("Hex", "Hex"),
+    ("Paste #RRGGBB or R,G,B (0–255)", "Incolla #RRGGBB o R,G,B (0–255)"),
     ("Baking {map} ({n}/{total})", "Bake di {map} in corso ({n}/{total})"),
     ("Baking {map} ({n}/{total}), texture set {set} of {sets}", "Bake di {map} in corso ({n}/{total}), set di texture {set} di {sets}"),
     ("Follow Newest Map", "Segui la mappa più recente"),

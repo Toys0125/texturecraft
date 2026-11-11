@@ -1,6 +1,8 @@
 //! Korean UI text: (English key, translation). Keys are the English strings passed to `tr`.
 
 pub const TABLE: &[(&str, &str)] = &[
+    ("Hex", "16진수"),
+    ("Paste #RRGGBB or R,G,B (0–255)", "#RRGGBB 또는 R,G,B (0–255) 붙여넣기"),
     ("Baking {map} ({n}/{total})", "{map} 베이크 중 ({n}/{total})"),
     ("Baking {map} ({n}/{total}), texture set {set} of {sets}", "{map} 베이크 중 ({n}/{total}), 텍스처 세트 {set}/{sets}"),
     ("Follow Newest Map", "최신 맵 따라가기"),

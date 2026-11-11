@@ -1,6 +1,8 @@
 //! Arabic UI text: (English key, translation). Keys are the English strings passed to `tr`.
 
 pub const TABLE: &[(&str, &str)] = &[
+    ("Hex", "سداسي عشري"),
+    ("Paste #RRGGBB or R,G,B (0–255)", "الصق ‎#RRGGBB أو R,G,B ‏(0–255)"),
     ("Baking {map} ({n}/{total})", "جارٍ خبز {map} ({n}/{total})"),
     ("Baking {map} ({n}/{total}), texture set {set} of {sets}", "جارٍ خبز {map} ({n}/{total})، مجموعة الخامات {set} من {sets}"),
     ("Follow Newest Map", "تتبّع أحدث خريطة"),

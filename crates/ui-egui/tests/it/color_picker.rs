@@ -1,5 +1,5 @@
 //! The color picker popup keeps its place while the color changes, picks from its square and hue
-//! strip, and copies its values.
+//! strip, edits hex colors, pastes RGB values, and copies its values.
 
 use egui::accesskit::Role;
 use egui_kittest::Harness;
@@ -38,6 +38,141 @@ fn click(h: &mut Harness<'_, [f32; 3]>, p: egui::Pos2) {
     h.run_steps(3);
 }
 
+fn replace_color_text(h: &mut Harness<'_, [f32; 3]>, event: egui::Event) {
+    h.get_by_role_and_label(Role::TextInput, "Hex").click();
+    h.run_steps(2);
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    h.event(event);
+    h.run_steps(3);
+}
+
+fn assert_srgb(h: &Harness<'_, [f32; 3]>, expected: [u8; 3]) {
+    let actual = h.state().map(|v| (texturecraft_engine::texel::linear_to_srgb(v) * 255.0).round() as u8);
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn hex_colors_can_be_typed_or_pasted() {
+    let mut h = open_picker([1.0; 3]);
+    for (event, expected) in [
+        (egui::Event::Text("#FF0000".into()), [255, 0, 0]),
+        (egui::Event::Paste("  #1a80cF  ".into()), [26, 128, 207]),
+        (egui::Event::Paste("336699".into()), [51, 102, 153]),
+    ] {
+        replace_color_text(&mut h, event);
+        assert_srgb(&h, expected);
+    }
+}
+
+#[test]
+fn rgb_values_can_be_pasted_including_the_copy_buttons_format() {
+    let mut h = open_picker([1.0; 3]);
+    for (text, expected) in [("255,0,0", [255, 0, 0]), (" 32, 128, 240 ", [32, 128, 240])] {
+        replace_color_text(&mut h, egui::Event::Paste(text.into()));
+        assert_srgb(&h, expected);
+    }
+    h.get_by_label("Copy RGB values").click();
+    h.step();
+    let copied = h
+        .output()
+        .platform_output
+        .commands
+        .iter()
+        .find_map(|c| match c {
+            egui::OutputCommand::CopyText(text) => Some(text.clone()),
+            _ => None,
+        })
+        .unwrap();
+    *h.state_mut() = [0.0; 3];
+    h.run_steps(3);
+    replace_color_text(&mut h, egui::Event::Paste(copied));
+    assert_srgb(&h, [32, 128, 240]);
+}
+
+#[test]
+fn incomplete_or_invalid_color_text_does_not_change_the_color() {
+    let mut h = open_picker([1.0, 0.0, 0.0]);
+    for text in ["", "#12", "#gg0000", "#+f+f+f", "#12345678", "256,0,0", "-1,0,0", "1.5,0,0", "1,2", "1,2,3,4", "色0000"] {
+        replace_color_text(&mut h, egui::Event::Paste(text.into()));
+        assert_srgb(&h, [255, 0, 0]);
+    }
+    replace_color_text(&mut h, egui::Event::Text("#12".into()));
+    h.event(egui::Event::Text("3456".into()));
+    h.run_steps(3);
+    assert_srgb(&h, [18, 52, 86]);
+}
+
+#[test]
+fn the_hex_field_tracks_external_changes_and_normalizes_on_blur() {
+    let mut h = open_picker([1.0, 0.0, 0.0]);
+    assert_eq!(h.get_by_role_and_label(Role::TextInput, "Hex").value().as_deref(), Some("#FF0000"));
+    replace_color_text(&mut h, egui::Event::Paste("0,128,255".into()));
+    let away = r_value(&h).center();
+    click(&mut h, away);
+    assert_eq!(h.get_by_role_and_label(Role::TextInput, "Hex").value().as_deref(), Some("#0080FF"));
+    *h.state_mut() = [1.0; 3];
+    h.run_steps(3);
+    assert_eq!(h.get_by_role_and_label(Role::TextInput, "Hex").value().as_deref(), Some("#FFFFFF"));
+}
+
+#[test]
+fn paste_applies_to_the_open_picker_without_focusing_a_field() {
+    let mut h = open_picker([1.0; 3]);
+    for (text, expected) in [("#FF0000", [255, 0, 0]), ("0,128,255", [0, 128, 255]), ("#bad", [0, 128, 255])] {
+        assert!(!h.ctx.text_edit_focused(), "no text field is focused");
+        h.event(egui::Event::Paste(text.into()));
+        h.run_steps(3);
+        assert_srgb(&h, expected);
+    }
+}
+
+#[test]
+fn paste_replaces_the_whole_color_while_an_rgb_channel_is_being_edited() {
+    let mut h = open_picker([1.0; 3]);
+    let red = r_value(&h).center();
+    click(&mut h, red);
+    assert!(h.ctx.text_edit_focused());
+    h.event(egui::Event::Paste("#2080F0".into()));
+    h.run_steps(3);
+    assert_srgb(&h, [32, 128, 240]);
+}
+
+#[test]
+fn an_open_picker_takes_paste_before_the_apps_layer_shortcuts() {
+    use texturecraft_engine::core::Channel;
+    use texturecraft_ui_egui::TextureCraftApp;
+
+    let mut session = texturecraft_engine::sample_session(256, 64).unwrap();
+    texturecraft_engine::execute(&mut session, "layer.copy", &serde_json::Value::Null).unwrap();
+    let mut h = Harness::builder().with_size(egui::vec2(1600.0, 960.0)).build_eframe(|cc| TextureCraftApp::new(cc, session));
+    h.state_mut().ui.prefs.language = "en".into();
+    h.run_steps(4);
+    h.get_by_label("Material").click();
+    h.run_steps(3);
+    let label = h.get_by_label("Base color").rect();
+    let swatch = egui::pos2(label.right() + 30.0, label.center().y);
+    h.drag_at(swatch);
+    h.drop_at(swatch);
+    h.run_steps(3);
+    assert!(h.query_by_label("Copy RGB values").is_some());
+    let layers = h.state().session.doc.project.layers.len();
+    for text in ["#FF0000", "0,128,255", "not a color"] {
+        h.event(egui::Event::Paste(text.into()));
+        h.run_steps(3);
+        assert_eq!(h.state().session.doc.project.layers.len(), layers, "paste belongs to the picker");
+    }
+    let color = h.state().session.tool.values[&Channel::BaseColor];
+    let srgb = color.map(|v| (texturecraft_engine::texel::linear_to_srgb(v) * 255.0).round() as u8);
+    assert_eq!(srgb, [0, 128, 255]);
+
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    assert!(h.query_by_label("Copy RGB values").is_none());
+    h.event(egui::Event::Paste("Layer".into()));
+    h.run_steps(3);
+    assert_eq!(h.state().session.doc.project.layers.len(), layers + 1, "closing the picker restores layer paste");
+}
+
 #[test]
 fn the_popup_stays_put_while_the_color_changes() {
     let mut h = open_picker([1.0; 3]);
@@ -50,9 +185,10 @@ fn the_popup_stays_put_while_the_color_changes() {
 #[test]
 fn the_square_and_the_hue_strip_pick_the_color() {
     let mut h = open_picker([1.0; 3]);
-    // The square starts a row below the values; its bottom-left corner is black.
+    // The square starts below the Hex row; its bottom-left corner is black.
     let r = r_value(&h);
-    let square = egui::Rect::from_min_size(egui::pos2(r.left() + 1.0, r.bottom() + 8.0), egui::vec2(273.0, 273.0));
+    let hex = h.get_by_role_and_label(Role::TextInput, "Hex").rect();
+    let square = egui::Rect::from_min_size(egui::pos2(r.left() + 1.0, hex.bottom() + 8.0), egui::vec2(273.0, 273.0));
     click(&mut h, square.left_bottom() + egui::vec2(2.0, -6.0));
     assert!(h.state().iter().all(|c| *c < 0.01), "black: {:?}", h.state());
     // Full saturation and value, then a hue a third of the way along: green.
