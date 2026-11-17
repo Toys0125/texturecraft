@@ -176,6 +176,10 @@ fn an_open_picker_takes_paste_before_the_apps_layer_shortcuts() {
         h.run_steps(3);
         assert_eq!(h.state().session.doc.project.layers.len(), layers, "paste belongs to the picker");
     }
+    let image = std::sync::Arc::new(egui::ColorImage::filled([1, 1], egui::Color32::WHITE));
+    h.event(egui::Event::PasteImage(image));
+    h.run_steps(3);
+    assert_eq!(h.state().session.doc.project.layers.len(), layers, "an image paste must not paste a layer behind the picker");
     let color = h.state().session.tool.values[&Channel::BaseColor];
     let srgb = color.map(|v| (texturecraft_engine::texel::linear_to_srgb(v) * 255.0).round() as u8);
     assert_eq!(srgb, [0, 128, 255]);

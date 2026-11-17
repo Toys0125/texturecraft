@@ -465,7 +465,7 @@ fn color_picker(ui: &mut Ui, id: egui::Id, c: &mut Color32, width: f32) -> bool 
     let mut pasted = false;
     let mut dragged = false;
     ui.input_mut(|input| {
-        // Consume even invalid color pastes: they must not edit an individual RGB field or a layer.
+        // Consume invalid text and image pastes so they cannot edit a field or paste a layer.
         input.events.retain(|event| {
             if let egui::Event::Paste(text) = event {
                 if let Some(rgb) = parse_color_text(text) {
@@ -475,7 +475,7 @@ fn color_picker(ui: &mut Ui, id: egui::Id, c: &mut Color32, width: f32) -> bool 
                 }
                 false
             } else {
-                true
+                !matches!(event, egui::Event::PasteImage(_))
             }
         });
     });
