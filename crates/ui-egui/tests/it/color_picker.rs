@@ -51,6 +51,21 @@ fn assert_srgb(h: &Harness<'_, [f32; 3]>, expected: [u8; 3]) {
     assert_eq!(actual, expected);
 }
 
+/// Find the rendered gradient, so tests do not assume the height of the rows above it.
+fn gradient_rect(h: &Harness<'_, [f32; 3]>, square: bool) -> egui::Rect {
+    h.output()
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape {
+            egui::Shape::Mesh(mesh) => {
+                let rect = mesh.calc_bounds();
+                (rect.width() > 200.0 && (rect.width() == rect.height()) == square).then_some(rect)
+            }
+            _ => None,
+        })
+        .unwrap()
+}
+
 #[test]
 fn hex_colors_can_be_typed_or_pasted() {
     let mut h = open_picker([1.0; 3]);
@@ -118,7 +133,7 @@ fn the_hex_field_tracks_external_changes_and_normalizes_on_blur() {
 #[test]
 fn paste_applies_to_the_open_picker_without_focusing_a_field() {
     let mut h = open_picker([1.0; 3]);
-    for (text, expected) in [("#FF0000", [255, 0, 0]), ("0,128,255", [0, 128, 255]), ("#bad", [0, 128, 255])] {
+    for (text, expected) in [("#FF0000", [255, 0, 0]), ("0,128,255", [0, 128, 255]), ("#bad!", [0, 128, 255])] {
         assert!(!h.ctx.text_edit_focused(), "no text field is focused");
         h.event(egui::Event::Paste(text.into()));
         h.run_steps(3);
@@ -185,16 +200,13 @@ fn the_popup_stays_put_while_the_color_changes() {
 #[test]
 fn the_square_and_the_hue_strip_pick_the_color() {
     let mut h = open_picker([1.0; 3]);
-    // The square starts below the Hex row; its bottom-left corner is black.
-    let r = r_value(&h);
-    let hex = h.get_by_role_and_label(Role::TextInput, "Hex").rect();
-    let square = egui::Rect::from_min_size(egui::pos2(r.left() + 1.0, hex.bottom() + 8.0), egui::vec2(273.0, 273.0));
+    let square = gradient_rect(&h, true);
     click(&mut h, square.left_bottom() + egui::vec2(2.0, -6.0));
     assert!(h.state().iter().all(|c| *c < 0.01), "black: {:?}", h.state());
     // Full saturation and value, then a hue a third of the way along: green.
     click(&mut h, square.right_top() + egui::vec2(-1.0, 1.0));
-    let strip = square.bottom() + 14.0;
-    click(&mut h, egui::pos2(square.left() + 275.0 / 3.0, strip));
+    let green = gradient_rect(&h, false).lerp_inside(egui::vec2(1.0 / 3.0, 0.5));
+    click(&mut h, green);
     let [r, g, b] = *h.state();
     assert!(g > 0.9 && r < 0.05 && b < 0.05, "green: {:?}", h.state());
 }
@@ -206,4 +218,81 @@ fn the_copy_button_copies_the_rgb_values() {
     h.step();
     let copied = h.output().platform_output.commands.iter().any(|c| matches!(c, egui::OutputCommand::CopyText(t) if t == "255, 0, 0"));
     assert!(copied, "{:?}", h.output().platform_output.commands);
+}
+
+#[test]
+fn shorthand_hex_and_rgb_function_text_can_be_pasted_without_focus() {
+    let mut h = open_picker([1.0; 3]);
+    for (text, expected) in [("#f0a", [255, 0, 170]), ("rgb(10, 20, 30)", [10, 20, 30]), ("1 2 3", [1, 2, 3])] {
+        h.event(egui::Event::Paste(text.into()));
+        h.run_steps(3);
+        assert_srgb(&h, expected);
+    }
+}
+
+#[test]
+fn short_hex_is_committed_on_enter_or_blur_but_not_during_typing() {
+    let mut h = open_picker([1.0, 0.0, 0.0]);
+    replace_color_text(&mut h, egui::Event::Text("#00F".into()));
+    assert_srgb(&h, [255, 0, 0]);
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    assert_srgb(&h, [0, 0, 255]);
+    replace_color_text(&mut h, egui::Event::Text("#0F0".into()));
+    assert_srgb(&h, [0, 0, 255]);
+    let away = r_value(&h).center();
+    click(&mut h, away);
+    assert_srgb(&h, [0, 255, 0]);
+}
+
+#[test]
+fn the_hex_copy_button_copies_a_complete_color() {
+    let mut h = open_picker([1.0, 0.0, 0.0]);
+    h.get_by_label("Copy Hex code").click();
+    h.step();
+    let copied = h.output().platform_output.commands.iter().any(|c| matches!(c, egui::OutputCommand::CopyText(t) if t == "#FF0000"));
+    assert!(copied);
+}
+
+#[test]
+fn leaving_the_hex_field_for_the_hue_strip_keeps_the_new_color() {
+    let mut h = open_picker([1.0, 0.0, 0.0]);
+    h.get_by_role_and_label(Role::TextInput, "Hex").click();
+    h.run_steps(3);
+    let green = gradient_rect(&h, false).lerp_inside(egui::vec2(1.0 / 3.0, 0.5));
+    click(&mut h, green);
+    assert_srgb(&h, [0, 255, 0]);
+}
+
+#[test]
+fn committing_an_unchanged_gray_color_keeps_the_remembered_hue() {
+    let mut h = open_picker([0.0, 1.0, 0.0]);
+    let square = gradient_rect(&h, true);
+    let white = square.left_top();
+    click(&mut h, white);
+    assert_srgb(&h, [255; 3]);
+    replace_color_text(&mut h, egui::Event::Text("#FFFFFF".into()));
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    h.event(egui::Event::Paste("#FFFFFF".into()));
+    h.run_steps(3);
+    click(&mut h, square.right_top() - egui::vec2(0.1, 0.0));
+    assert_srgb(&h, [0, 255, 0]);
+}
+
+#[test]
+fn unfinished_hex_input_survives_switching_away_from_the_window() {
+    let mut h = open_picker([1.0, 0.0, 0.0]);
+    replace_color_text(&mut h, egui::Event::Text("#00F".into()));
+    h.input_mut().focused = false;
+    h.event(egui::Event::WindowFocused(false));
+    h.run_steps(3);
+    assert!(!h.ctx.input(|input| input.focused));
+    assert_eq!(h.get_by_role_and_label(Role::TextInput, "Hex").value().as_deref(), Some("#00F"));
+    h.input_mut().focused = true;
+    h.event(egui::Event::WindowFocused(true));
+    h.run_steps(3);
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    assert_srgb(&h, [0, 0, 255]);
 }
