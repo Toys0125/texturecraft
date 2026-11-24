@@ -565,9 +565,14 @@ fn color_picker(ui: &mut Ui, id: egui::Id, c: &mut Color32, width: f32) -> bool 
         // Widget focus survives switching applications; response focus also needs window focus.
         let focused = ui.memory(|memory| memory.has_focus(edit.id));
         pending |= edit.changed();
+        let lost_focus = edit.lost_focus();
         let parsed = parse_color_text(&hex);
-        let enter = (edit.has_focus() || edit.lost_focus()) && ui.input(|input| input.key_pressed(egui::Key::Enter));
-        if pending && ((edit.changed() && is_six_digit_hex(&hex)) || enter || edit.lost_focus()) {
+        let enter = (edit.has_focus() || lost_focus) && ui.input(|input| input.key_pressed(egui::Key::Enter));
+        // Escape can clear focus before the text edit runs. Discard the draft before handling blur.
+        if (focused || lost_focus) && ui.input(|input| input.key_pressed(egui::Key::Escape)) {
+            hex = hex_of(srgb);
+            pending = false;
+        } else if pending && ((edit.changed() && is_six_digit_hex(&hex)) || enter || lost_focus) {
             if let Some(rgb) = parsed {
                 typed |= srgb != rgb;
                 srgb = rgb;

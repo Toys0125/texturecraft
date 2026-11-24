@@ -235,6 +235,18 @@ fn shorthand_hex_and_rgb_function_text_can_be_pasted_without_focus() {
 }
 
 #[test]
+fn escape_discards_a_pending_hex_edit_and_keeps_the_applied_color() {
+    let mut h = open_picker([0.0, 0.0, 1.0]);
+    replace_color_text(&mut h, egui::Event::Text("#FF0000".into()));
+    assert_srgb(&h, [255, 0, 0]);
+    replace_color_text(&mut h, egui::Event::Text("#0F0".into()));
+    assert_srgb(&h, [255, 0, 0]);
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    assert_srgb(&h, [255, 0, 0]);
+}
+
+#[test]
 fn short_hex_is_committed_on_enter_or_blur_but_not_during_typing() {
     let mut h = open_picker([1.0, 0.0, 0.0]);
     replace_color_text(&mut h, egui::Event::Text("#00F".into()));
