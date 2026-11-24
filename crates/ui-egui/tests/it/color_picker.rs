@@ -162,7 +162,7 @@ fn an_open_picker_takes_paste_before_the_apps_layer_shortcuts() {
     let mut h = Harness::builder().with_size(egui::vec2(1600.0, 960.0)).build_eframe(|cc| TextureCraftApp::new(cc, session));
     h.state_mut().ui.prefs.language = "en".into();
     h.run_steps(4);
-    h.get_by_label("Material").click();
+    h.get_by_role_and_label(Role::Button, "Material").click();
     h.run_steps(3);
     let label = h.get_by_label("Base color").rect();
     let swatch = egui::pos2(label.right() + 30.0, label.center().y);

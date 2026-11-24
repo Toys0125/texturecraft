@@ -63,7 +63,7 @@ Why alpha. Mouse/keyboard tasks verified 3D/2D painting, undo/redo, material dra
 and generator editing, UV rectangle fill, UI baking, native saving and texture export. Separate
 command checks covered high-to-low transfer, UDIM sizes/packing and scene/material exports.
 The interface is recognizably close in its painting, bake and export workspaces, but still lacks
-mask-thumbnail effect menus, effect renaming, several fill controls and a MaterialX export option.
+mask-thumbnail effect menus and several fill controls.
 Generator depth is limited, bake equivalence is open,
 and hardware/performance coverage is incomplete. There were **96 open issues** on the review date;
 these include requests and older reports, not 96 reproduced defects. The published
@@ -91,7 +91,7 @@ incomplete validation; they are not measured success rates or speed comparisons.
 
 | Dimension | % ready | Weight | Hours to full | Evidence / remaining work |
 |---|---:|---:|---|---|
-| Features (depth) | ~65% | 30 | TBD | Core editing tasks and high/low/UDIM outputs exercised; generators, properties, mask anchors and specialized workflows need depth |
+| Features (depth) | ~65% | 30 | TBD | Core editing tasks and high/low/UDIM outputs exercised; generators, properties and specialized workflows need depth. Mask anchors landed after this assessment; live UI validation remains |
 | UI/UX fidelity | ~65% | 20 | TBD | Current editing/bake/export UI checked; [gaps](docs/ui-parity.md), ArtCraft UI adoption and revalidation after refactoring remain |
 | File formats / interchange | ~60% | 10 | TBD | Current native save and basic exports exercised; possible `.tcraft`/output-package reworks, unfinished upstream `.mcmat`, `.spp` and consumer validation remain |
 | Hardware (GPU, pen, displays) | ~50% | 8 | TBD | One Windows GPU exercised; pen tilt, pressure across platforms and display coverage remain incomplete |
@@ -108,9 +108,9 @@ menu entries. Feature rows overlap and are not an additional additive score.
 
 | Area | % ready | Hours | What works / main gaps |
 |---|---:|---|---|
-| Projects and files | ~80% | TBD | Current `.tcraft` new/save/reopen passed with layers, effects and baked maps retained. Schema/container rework remains possible; versioning/migration policy and renewed persistence/recovery tests are needed if adopted. Large cases, Alembic HDF5 and animation remain open |
+| Projects and files | ~80% | TBD | Current `.tcraft` new/save/reopen passed with layers, effects and baked maps retained. Schema/container rework remains possible; versioning/migration policy and renewed persistence/recovery tests are needed if adopted. Large cases, Alembic HDF5 and animation remain open; PBR folder/ZIP/selected-file import landed after this assessment: `file.importPbrFolder` creates one fill layer from named maps, including packed ORM and OpenGL/DirectX normals, with a UI dialog and optional native library copy; it is not credited in this score |
 | Texture sets and UDIM | ~80% | TBD | Two tiles exported at independent 128/256 px sizes with expected packed-channel values; 21 channel kinds in source. Many-set/many-tile production coverage remains untested |
-| Layers, masks and effects | ~75% | TBD | UI fill/black-mask creation, generator editing/duplication and native persistence passed. Mask-thumbnail context actions, UI effect renaming and mask-stack anchors remain missing |
+| Layers, masks and effects | ~75% | TBD | UI fill/black-mask creation, generator editing/duplication and native persistence passed at the assessed revision. Mask-thumbnail context actions remain missing; effect renaming and mask-stack anchors landed afterward, with live UI validation still open |
 | Painting and precise 2D work | ~70% | TBD | Mouse painting in both views, keyboard undo/redo, view shortcuts, brush gesture and UV-island rectangle fill passed. Nine tool kinds exist; brush feel, pressure/tilt, other tool task suites and complete trim sheets need validation |
 | Generators and smart masks | ~45% | TBD | Seven generator kinds and 24 smart-mask presets; Position/global-balance editing worked in the UI. Shared adjustments, resolution and input slots exist; richer generators, micro-detail workflows and saving user smart masks remain incomplete |
 | Materials and asset library | ~60% | TBD | 72 procedural materials and 21 smart materials; shelf search/drop worked. Legacy MaterialCraft paths exist, but the planned `.mcmat` contract is unfinished upstream. Library variety, previews and cross-app integration remain work |
@@ -118,7 +118,7 @@ menu entries. Feature rows overlap and are not an additional additive score.
 | Baking | ~60% | TBD | All ten maps completed through the UI on CPU at 256 px and through commands on GPU at 128 px. Separate high/low normal/height transfer produced varying maps; cross-app pixel equivalence, larger assets and resolution-stable wear remain unproven |
 | Viewport, shading and rendering | ~70% | TBD | PBR/IBL, extra shading lobes, 3D/2D views, displacement and CPU/GPU path-tracing paths. Matching material/display behavior, larger scenes and hardware ray tracing remain open |
 | Color management | ~35% | TBD | Linear/sRGB handling, fixed export spaces and profile metadata; display model has Linear/ACES-filmic tone mapping. Configurable OCIO project/display workflows are absent |
-| Texture and scene export | ~75% | TBD | Current PNG/UDIM/USD/GLB/MaterialX checks passed within scope. Output-package layout/content may be reworked; package contracts and consumers need separate validation. MaterialX UI output, complex materials and larger UDIM assets remain incomplete |
+| Texture and scene export | ~75% | TBD | Current PNG/UDIM/USD/GLB/MaterialX checks passed within scope. Output-package layout/content may be reworked; package contracts and consumers need separate validation. MaterialX export covers OpenPBR only (no standard_surface); complex materials and larger UDIM assets remain incomplete |
 | Read-only `.spp` compatibility | 0% | TBD after feasibility study | Planned; no reader, version matrix or import-fidelity corpus. `.tcraft` remains the save format |
 | Workspace, panels and preferences | ~65% | TBD | Current views/layouts checked; narrow labels truncate. Incoming ArtCraft UI refactoring/shared components can change these surfaces; task, shortcut, accessibility and layout/preferences persistence checks must be repeated |
 | Automation | ~80% | TBD | Command inspection and scripted editing/export work; UI, CLI and MCP surfaces share engine commands. This review exercised the control channel and CLI, not every MCP/tool path |
@@ -134,8 +134,8 @@ supported subset, version policy and authoring/re-cook workflow must be agreed a
 the legacy promise must not be carried forward automatically.
 
 The [UI gap inventory](docs/ui-parity.md#missing-controls-and-workflows) records reproduction
-routes and acceptance checks: mask context/rename/save/export actions; independent U/V tiling,
-filtering/wrap, physical-size and warp/per-tile projections; mask anchors; MaterialX UI output;
+routes and acceptance checks: mask context/save/export actions; independent U/V tiling,
+filtering/wrap, physical-size and warp/per-tile projections;
 and configurable color-management settings. Generator depth and narrow-layout readability are
 tracked as partial areas. Direct hardness/angle controls and polygon/UV rectangle fill already
 exist; older reports must not turn them into fresh missing-feature claims.
